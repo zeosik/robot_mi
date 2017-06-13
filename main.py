@@ -17,15 +17,17 @@ from LinkProcessor import LinkProcessor
 FORMAT = '%(asctime)-15s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'
 log_file = "C:\\Users\\mareczek\\PycharmProjects\\mi_2_robot\\logs.txt"
 #os.remove(log_file)
-logging.basicConfig(filename=log_file, filemode='a', level=logging.INFO, format=FORMAT)
+logging.basicConfig(filename=log_file, level=logging.INFO, format=FORMAT)
 #logging.basicConfig(level=logging.INFO, format=FORMAT)
 logger = logging.getLogger('Main')
 
 # root = 'https://www.python.org/'
-# root = 'https://www.cam.ac.uk/'
-root = 'http://www.ox.ac.uk/'
+root = 'https://www.cam.ac.uk/'
+# root = 'http://www.ox.ac.uk/'
 
-executor = Executor(root)
+LinkDownloader.cache_dir = 'cache_cam_html2'
+
+executor = Executor(root, 100, 1)
 executor.work()
 
 

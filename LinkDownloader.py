@@ -8,11 +8,14 @@ from urllib.request import Request, urlopen
 
 class LinkDownloader:
 
-    def __init__(self, url, cache_location = Path(os.getcwd()) / 'cache_html_only'):
+    cache_dir = 'cache'
+    cache_location = Path(os.getcwd())
+
+    def __init__(self, url):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.url = urlparse(url)
         self.data = None
-        self.cache_path = Path(cache_location)
+        self.cache_path = Path(LinkDownloader.cache_location) / LinkDownloader.cache_dir
         if not self.cache_path.is_dir():
             self.cache_path.mkdir()
 

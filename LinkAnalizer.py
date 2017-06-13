@@ -3,6 +3,9 @@ import logging
 from pathlib import Path
 from urllib.parse import urlparse
 
+from graph_tool import Graph
+from graph_tool.draw import graph_draw
+
 from LinkDownloader import LinkDownloader
 from LinkExtractor import LinkExtractor
 
@@ -34,7 +37,11 @@ class LinkAnalizer:
                 self.hit.append(link)
                 extractor = LinkExtractor(skip_check_exstentions= True)
                 links = set(extractor.get_good_links_from_data(html, self.root))
-                not_visited_links = filter(lambda l: l not in self.visited, links)
+                not_visited_links = []
+                for new_link in links:
+                    if new_link not in self.visited:
+                        not_visited_links.append(new_link)
+
                 self._add_to_queue(not_visited_links)
                 if len(self.hit) % 100 == 0:
                     print('stats {0}/{1} hit:{2}'.format(len(self.visited) - len(self.queue), len(self.visited), len(self.hit)))
@@ -53,6 +60,18 @@ class LinkAnalizer:
                 maxv = vv
 
         print("maxd: {0} for link: {1}".format(maxd, maxv.name))
+
+        g = Graph()
+        v_vertex = {}
+        for vv in self.v:
+            vertex = g.add_vertex()
+            v_vertex[vv] = vertex
+
+        for vv, vertex in v_vertex.items():
+            for n in vv.neighbours:
+                g.add_edge(vertex, v_vertex[n])
+
+        graph_draw(g)
 
     def _add_neighbours(self, link_vertex):
         for vertex in self.v:

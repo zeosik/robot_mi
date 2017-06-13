@@ -21,7 +21,7 @@ class LinkExtractor:
 
     def _find_links(self, data):
         links = []
-        for link in BeautifulSoup(data, parse_only=SoupStrainer('a'), from_encoding='utf8'):
+        for link in BeautifulSoup(data, 'html.parser', parse_only=SoupStrainer('a'), from_encoding='utf8'):
             if link.has_attr('href'):
                 links.append(link['href'])
         return links
