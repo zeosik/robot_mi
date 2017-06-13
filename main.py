@@ -25,9 +25,9 @@ logger = logging.getLogger('Main')
 root = 'https://www.cam.ac.uk/'
 # root = 'http://www.ox.ac.uk/'
 
-LinkDownloader.cache_dir = 'cache_cam_html2'
+LinkDownloader.cache_dir = 'cache_cam_html'
 
-executor = Executor(root, 100, 1)
+executor = Executor(root, None, 1000)
 executor.work()
 
 

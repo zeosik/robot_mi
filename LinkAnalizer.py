@@ -1,16 +1,15 @@
 import logging
 
-from pathlib import Path
+from statistics import mean
 from urllib.parse import urlparse
 
-from graph_tool import Graph
-from graph_tool.draw import graph_draw
+from networkx import Graph, all_pairs_shortest_path_length, average_clustering, is_connected, DiGraph
 
 from LinkDownloader import LinkDownloader
 from LinkExtractor import LinkExtractor
 
 
-class Vertex:
+class MyVertex:
 
     def __init__(self, name, links):
         self.name = name
@@ -26,11 +25,11 @@ class LinkAnalizer:
         self.queue = [root]
         self.visited = set()
         self.hit = []
-        self.v = []
+        self.my_vertexes = []
 
     def analize(self):
         link_vertex = {}
-        while len(self.queue) > 0:
+        while len(self.queue) > 0: # and len(self.hit) < 100 :
             link = self._pop_first()
             html = self._from_cache(link)
             if html is not None:
@@ -46,35 +45,73 @@ class LinkAnalizer:
                 if len(self.hit) % 100 == 0:
                     print('stats {0}/{1} hit:{2}'.format(len(self.visited) - len(self.queue), len(self.visited), len(self.hit)))
                 #
-                vertex = Vertex(link, links)
-                self.v.append(vertex)
-                link_vertex[link] = vertex
+                my_vertex = MyVertex(link, links)
+                self.my_vertexes.append(my_vertex)
+                link_vertex[link] = my_vertex
         self._add_neighbours(link_vertex)
 
-        maxd = 0
-        maxv = None
-        for vv in self.v:
-            local = len(vv.neighbours)
-            if local > maxd:
-                maxd = local
-                maxv = vv
+        digraph = DiGraph()
+        graph = Graph()
+        #my_vertex_g_vertex = {}
+        for my_vertex in self.my_vertexes:
+            digraph.add_node(my_vertex)
+            graph.add_node(my_vertex)
+            # g_vertex = g.add_node(my_vertex)
+            # my_vertex_g_vertex[my_vertex] = g_vertex
 
-        print("maxd: {0} for link: {1}".format(maxd, maxv.name))
+        for source in self.my_vertexes:
+            for target in source.neighbours:
+                digraph.add_edge(source, target)
+                graph.add_edge(source, target)
 
-        g = Graph()
-        v_vertex = {}
-        for vv in self.v:
-            vertex = g.add_vertex()
-            v_vertex[vv] = vertex
+        #for my_vertex_source, g_vertex_source in my_vertex_g_vertex.items():
+        #    for my_vertex_target in my_vertex_source.neighbours:
+        #        g_vertex_target = my_vertex_g_vertex[my_vertex_target]
+        #        g.add_edge(g_vertex_source, g_vertex_target)
 
-        for vv, vertex in v_vertex.items():
-            for n in vv.neighbours:
-                g.add_edge(vertex, v_vertex[n])
+        print ('nodes: {0}'.format(digraph.number_of_nodes()))
+        print ('edges: {0}'.format(digraph.number_of_edges()))
 
-        graph_draw(g)
+        out_d = digraph.out_degree().values()
+        print ('out degree min: {0} max: {1}'.format(min(out_d), max(out_d)))
+
+        in_d = digraph.in_degree().values()
+        print ('in degree min: {0} max: {1}'.format(min(in_d), max(in_d)))
+
+
+        paths = all_pairs_shortest_path_length(digraph)
+        lengths = []
+        for s in self.my_vertexes:
+            for t in self.my_vertexes:
+                if s is not t and s in paths and t in paths[s]:
+                    lengths.append(paths[s][t])
+
+        print ('mean: {0}'.format(mean(lengths)))
+        print ('diameter: {0}'.format(max(lengths)))
+
+        clustering = average_clustering(graph)
+
+        print ('clustering coefficient : {0}'.format(clustering))
+
+
+        #odporność na awarie
+        disconnected = []
+        for my_vertex in self.my_vertexes:
+            graph.remove_node(my_vertex)
+            if not is_connected(graph):
+                disconnected.append(my_vertex)
+
+            #put back
+                graph.add_node(my_vertex)
+            for neighbour in my_vertex.neighbours:
+                graph.add_edge(my_vertex, neighbour)
+
+
+        print('removing {0}/{1} nodes disconnects graph'.format(len(disconnected), len(self.my_vertexes)))
+
 
     def _add_neighbours(self, link_vertex):
-        for vertex in self.v:
+        for vertex in self.my_vertexes:
             for link in vertex.all_links:
                 if link in link_vertex:
                     vertex.neighbours.append(link_vertex[link])
