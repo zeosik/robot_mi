@@ -27,22 +27,23 @@ class LinkAnalizer:
         self.root = root
         self.queue = [root]
         self.visited = set()
+        self.visited.add(root)
         self.hit = []
         self.my_vertexes = []
 
     def analize(self):
         link_vertex = {}
-        while len(self.queue) > 0:# and len(self.hit) < 100 :
+        while len(self.queue) > 0: # and len(self.hit) < 1000 :
             link = self._pop_first()
             html = self._from_cache(link)
             if html is not None:
                 self.hit.append(link)
                 extractor = LinkExtractor(skip_check_exstentions= True)
                 links = set(extractor.get_good_links_from_data(html, self.root))
-                not_visited_links = []
+                not_visited_links = set()
                 for new_link in links:
                     if new_link not in self.visited:
-                        not_visited_links.append(new_link)
+                        not_visited_links.add(new_link)
 
                 self._add_to_queue(not_visited_links)
                 if len(self.hit) % 100 == 0:
@@ -57,21 +58,22 @@ class LinkAnalizer:
         graph = Graph()
         #my_vertex_g_vertex = {}
         for my_vertex in self.my_vertexes:
-            digraph.add_node(my_vertex)
-            graph.add_node(my_vertex)
+            digraph.add_node(my_vertex.name)
+            graph.add_node(my_vertex.name)
             # g_vertex = g.add_node(my_vertex)
             # my_vertex_g_vertex[my_vertex] = g_vertex
 
         for source in self.my_vertexes:
             for target in source.neighbours:
-                digraph.add_edge(source, target)
-                graph.add_edge(source, target)
+                digraph.add_edge(source.name, target.name)
+                graph.add_edge(source.name, target.name)
 
         #for my_vertex_source, g_vertex_source in my_vertex_g_vertex.items():
         #    for my_vertex_target in my_vertex_source.neighbours:
         #        g_vertex_target = my_vertex_g_vertex[my_vertex_target]
         #        g.add_edge(g_vertex_source, g_vertex_target)
 
+        print ('my nodes: {0}'.format(len(self.my_vertexes)))
         print ('nodes: {0}'.format(digraph.number_of_nodes()))
         print ('edges: {0}'.format(digraph.number_of_edges()))
 
@@ -88,8 +90,8 @@ class LinkAnalizer:
         lengths = []
         for s in self.my_vertexes:
             for t in self.my_vertexes:
-                if s is not t and s in paths and t in paths[s]:
-                    lengths.append(paths[s][t])
+                if s is not t and s.name in paths and t.name in paths[s.name]:
+                    lengths.append(paths[s.name][t.name])
 
         print ('mean: {0}'.format(mean(lengths)))
         print ('diameter: {0}'.format(max(lengths)))
@@ -102,29 +104,41 @@ class LinkAnalizer:
         #odporność na awarie
         disconnected = []
         for my_vertex in self.my_vertexes:
-            graph.remove_node(my_vertex)
+            graph.remove_node(my_vertex.name)
             if not is_connected(graph):
-                disconnected.append(my_vertex)
+                disconnected.append(my_vertex.name)
 
             #put back
-                graph.add_node(my_vertex)
+                graph.add_node(my_vertex.name)
             for neighbour in my_vertex.neighbours:
-                graph.add_edge(my_vertex, neighbour)
+                graph.add_edge(my_vertex.name, neighbour.name)
 
 
         print('removing {0}/{1} nodes disconnects graph'.format(len(disconnected), len(self.my_vertexes)))
 
+        out_d_dump = {}
+        for my_vertex_name, value in out_d_dict.items():
+            out_d_dump[my_vertex_name] = value
+
+        in_d_dump = {}
+        for my_vertex_name, value in in_d_dict.items():
+            in_d_dump[my_vertex_name] = value
+
         self._dump(lengths, 'lengths')
-        self._dump(out_d_dict, 'out_d_dict')
-        self._dump(in_d_dict, 'in_d_dict')
+        self._dump(out_d_dump, 'out_d_dump')
+        self._dump(in_d_dump, 'in_d_dump')
+        self._dump(list(map(lambda v: v.name, self.my_vertexes)), 'my_veertexes_names')
+        self._dump(disconnected, 'disconnected')
         self._dump(graph, 'graph')
         self._dump(digraph, 'digraph')
-        self._dump(self.my_vertexes, 'my_veertexes')
 
     def _dump(self, object, name):
         filename = self._file_name(name)
         with open(file=filename, mode='wb') as file:
-            pickle.dump(object, file)
+            try:
+                pickle.dump(object, file)
+            except Exception as ex:
+                print('while dumping: {0} got ex: {1}'.format(name, ex))
 
     def _file_name(self, name):
         path = Path(os.getcwd()) / 'dump'
