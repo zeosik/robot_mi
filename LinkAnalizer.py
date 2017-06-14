@@ -1,4 +1,7 @@
 import logging
+import os
+import pickle
+from pathlib import Path
 
 from statistics import mean
 from urllib.parse import urlparse
@@ -29,7 +32,7 @@ class LinkAnalizer:
 
     def analize(self):
         link_vertex = {}
-        while len(self.queue) > 0: # and len(self.hit) < 100 :
+        while len(self.queue) > 0:# and len(self.hit) < 100 :
             link = self._pop_first()
             html = self._from_cache(link)
             if html is not None:
@@ -72,10 +75,12 @@ class LinkAnalizer:
         print ('nodes: {0}'.format(digraph.number_of_nodes()))
         print ('edges: {0}'.format(digraph.number_of_edges()))
 
-        out_d = digraph.out_degree().values()
+        out_d_dict = digraph.out_degree()
+        out_d = out_d_dict.values()
         print ('out degree min: {0} max: {1}'.format(min(out_d), max(out_d)))
 
-        in_d = digraph.in_degree().values()
+        in_d_dict = digraph.in_degree()
+        in_d = in_d_dict.values()
         print ('in degree min: {0} max: {1}'.format(min(in_d), max(in_d)))
 
 
@@ -109,6 +114,29 @@ class LinkAnalizer:
 
         print('removing {0}/{1} nodes disconnects graph'.format(len(disconnected), len(self.my_vertexes)))
 
+        self._dump(lengths, 'lengths')
+        self._dump(out_d_dict, 'out_d_dict')
+        self._dump(in_d_dict, 'in_d_dict')
+        self._dump(graph, 'graph')
+        self._dump(digraph, 'digraph')
+        self._dump(self.my_vertexes, 'my_veertexes')
+
+    def _dump(self, object, name):
+        filename = self._file_name(name)
+        with open(file=filename, mode='wb') as file:
+            pickle.dump(object, file)
+
+    def _file_name(self, name):
+        path = Path(os.getcwd()) / 'dump'
+        if not path.is_dir():
+            path.mkdir()
+        filename = str((path / '{0}.txt'.format(name)))
+        return filename
+
+    def from_dump(self, name):
+        filename = self._file_name(name)
+        with open(file=filename, mode='rb') as file:
+            return pickle.load(file)
 
     def _add_neighbours(self, link_vertex):
         for vertex in self.my_vertexes:
