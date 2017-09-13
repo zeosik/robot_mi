@@ -1,3 +1,4 @@
+from datetime import datetime
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
@@ -25,10 +26,30 @@ logger = logging.getLogger('Main')
 root = 'https://www.cam.ac.uk/'
 # root = 'http://www.ox.ac.uk/'
 
-LinkDownloader.cache_dir = 'cache_cam_html'
 
-executor = Executor(root, None, 1000)
-executor.work()
+def setcachepath(proc):
+    LinkDownloader.cache_location = '/home/marek/cache/'
+    LinkDownloader.cache_dir = str(proc)
+
+
+f = open('/home/marek/cache/stats.txt', 'w')
+
+for p in [32, 16, 8, 4, 1]:
+
+    start = datetime.now()
+    print(start)
+    setcachepath(p)
+
+    executor = Executor(root, max_pages=None, workers=p)
+    executor.work()
+    end = datetime.now()
+    print(end)
+
+    time_str = 'workers: {0}, dur: {3}, start: {1}, end: {2}'.format(p, start, end, end-start)
+    print(time_str)
+    f.write(time_str + '\n')
+
+f.close()
 
 
 # checker = LinkChecker(root)
